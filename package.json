@@ -1,22 +1,39 @@
 {
-  "name": "cost-calculator",
+  "name": "genie-cost-calculator",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "node prisma/seed.js",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "setup": "npm run docker:up && sleep 5 && npm run prisma:migrate && npm run prisma:seed"
   },
   "dependencies": {
-    "next": "16.0.10",
-    "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "@prisma/client": "^5.8.0",
+    "bcryptjs": "^2.4.3",
+    "jose": "^5.2.0",
+    "next": "14.0.4",
+    "next-auth": "^4.24.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.10",
-    "tailwindcss": "^4"
+    "@types/node": "^20",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.4",
+    "postcss": "^8",
+    "prisma": "^5.8.0",
+    "tailwindcss": "^3.3.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   }
 }
