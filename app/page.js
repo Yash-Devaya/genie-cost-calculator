@@ -322,21 +322,33 @@ export default function Home() {
           {/* View Full Cost Table */}
           <div className="mt-8 pt-8 border-t border-gray-800">
             <h3 className="text-lg font-semibold text-white mb-4">View Full Cost Table</h3>
-            <a
-              href="https://microland-my.sharepoint.com/:x:/r/personal/yash_devaya_microland_com/Documents/Book.xlsx?d=wb1ced5f392b24e008283fc05f7f9ca0e&csf=1&web=1&e=IqFWtW"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-3 w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg text-center transition-all shadow-lg hover:shadow-purple-500/50 group"
-            >
-              <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Open Excel Cost Table
-              <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-            <p className="text-center text-xs text-gray-500 mt-2">Opens complete cost breakdown in Excel</p>
+            {selectedTickets ? (
+              <button
+                onClick={() => {
+                  window.open(`/api/generate-csv?tickets=${selectedTickets}`, '_blank');
+                }}
+                className="flex items-center justify-center gap-3 w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg text-center transition-all shadow-lg hover:shadow-purple-500/50 group"
+              >
+                <svg className="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download Cost CSV for {selectedTickets} Tickets
+                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+              </button>
+            ) : (
+              <div className="flex items-center justify-center w-full px-6 py-4 bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-lg">
+                <p className="text-gray-500 text-sm">
+                  👆 Select number of tickets above to download cost breakdown CSV
+                </p>
+              </div>
+            )}
+            <p className="text-center text-xs text-gray-500 mt-2">
+              {selectedTickets 
+                ? `Downloads CSV with costs specifically for ${selectedTickets} tickets` 
+                : 'Select tickets to enable download'}
+            </p>
           </div>
         </div>
       </div>

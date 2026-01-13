@@ -111,6 +111,12 @@ export default function AdminPanel() {
             Save Changes
           </button>
           <Link 
+  href="/admin/users"
+  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition-colors"
+>
+  Manage Users
+</Link>
+          <Link 
             href="/" 
             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
           >

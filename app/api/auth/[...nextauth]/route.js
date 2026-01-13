@@ -86,22 +86,25 @@ const authOptions = {
     },
 
     async jwt({ token, user, account, trigger }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.provider = account?.provider;
-      }
-      return token;
-    },
+  if (user) {
+    token.id = user.id;
+    token.role = user.role;
+    token.isSuperAdmin = user.isSuperAdmin || false;
+    token.provider = account?.provider;
+  }
+  return token;
+},
 
-    async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.provider = token.provider;
-      }
-      return session;
-    },
+// Update the session callback:
+async session({ session, token }) {
+  if (token && session.user) {
+    session.user.id = token.id;
+    session.user.role = token.role;
+    session.user.isSuperAdmin = token.isSuperAdmin;
+    session.user.provider = token.provider;
+  }
+  return session;
+},
 
     async redirect({ url, baseUrl }) {
       if (url.startsWith(baseUrl)) {
@@ -118,7 +121,7 @@ const authOptions = {
 
   session: {
     strategy: "jwt",
-    maxAge: 60 * 60, // 1 hour (instead of 7 days)
+    maxAge: 60 * 2, // 1 hour (instead of 7 days)
     updateAge: 0, // Don't extend session
   },
 
@@ -130,7 +133,7 @@ const authOptions = {
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        maxAge: undefined, // Session cookie - expires when browser closes
+        maxAge: 60 * 2, // Session cookie - expires when browser closes
       },
     },
   },

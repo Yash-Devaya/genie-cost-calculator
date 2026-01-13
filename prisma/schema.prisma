@@ -1,3 +1,6 @@
+// ============================================
+// FILE 1: prisma/schema.prisma (UPDATED - Add isSuperAdmin field)
+// ============================================
 // This is your Prisma schema file
 generator client {
   provider = "prisma-client-js"
@@ -9,14 +12,16 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  username  String   @unique
-  password  String
-  role      Role     @default(USER)
-  email     String?  @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  sessions  Session[]
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  password     String
+  role         Role     @default(USER)
+  email        String?  @unique
+  isSuperAdmin Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sessions     Session[]
+  settingsUpdated AppSettings[]
 
   @@index([username])
   @@index([email])
@@ -35,24 +40,25 @@ model Session {
 }
 
 model AppSettings {
-  id                Int      @id @default(autoincrement())
-  key               String   @unique
-  value             String
-  updatedAt         DateTime @updatedAt
-  updatedBy         Int?
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy Int?
+  updater   User?    @relation(fields: [updatedBy], references: [id])
 
   @@index([key])
 }
 
 model ComponentCost {
-  id            Int      @id @default(autoincrement())
-  component     String
-  tickets1      Float    @default(0)
-  tickets10     Float    @default(0)
-  tickets100    Float    @default(0)
-  tickets1000   Float    @default(0)
-  tickets5000   Float    @default(0)
-  updatedAt     DateTime @updatedAt
+  id          Int      @id @default(autoincrement())
+  component   String
+  tickets1    Float    @default(0)
+  tickets10   Float    @default(0)
+  tickets100  Float    @default(0)
+  tickets1000 Float    @default(0)
+  tickets5000 Float    @default(0)
+  updatedAt   DateTime @updatedAt
 
   @@unique([component])
   @@index([component])
