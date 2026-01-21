@@ -121,7 +121,7 @@ async session({ session, token }) {
 
   session: {
     strategy: "jwt",
-    maxAge: 60 * 2, // 1 hour (instead of 7 days)
+    maxAge: 60 * 60 *2, // 1 hour (instead of 7 days)
     updateAge: 0, // Don't extend session
   },
 
@@ -133,7 +133,7 @@ async session({ session, token }) {
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 2, // Session cookie - expires when browser closes
+        maxAge: 60 * 60 * 2, // Session cookie - expires when browser closes
       },
     },
   },

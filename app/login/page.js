@@ -9,6 +9,10 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  
+  // REMOVE THESE TWO LINES - They don't belong in login page!
+  // const params = useParams();
+  // const productId = params.productId;
 
   const handleCredentialsLogin = async (e) => {
     e.preventDefault();
@@ -26,10 +30,11 @@ export default function LoginPage() {
         setError(result.error);
         setLoading(false);
       } else if (result?.ok) {
-        // Redirect to home, middleware will handle role-based redirect
-        window.location.href = '/';
+        // Redirect directly to products page
+        router.push('/products');
       }
     } catch (err) {
+      console.error('Login error:', err);
       setError('An error occurred during login');
       setLoading(false);
     }
@@ -41,9 +46,10 @@ export default function LoginPage() {
     
     try {
       await signIn('azure-ad', {
-        callbackUrl: '/',
+        callbackUrl: '/products',
       });
     } catch (err) {
+      console.error('Azure login error:', err);
       setError('An error occurred during Azure login');
       setLoading(false);
     }

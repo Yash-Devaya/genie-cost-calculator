@@ -5,88 +5,41 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const tickets = searchParams.get('tickets');
+    const planId = searchParams.get('planId');
 
     if (!tickets) {
       return NextResponse.json({ error: 'Tickets parameter required' }, { status: 400 });
     }
 
-    // Fetch costs from database
-    const costs = await prisma.componentCost.findMany();
-    
-    const costsData = {};
-    costs.forEach(cost => {
-      costsData[cost.component] = {
-        '1': cost.tickets1,
-        '10': cost.tickets10,
-        '100': cost.tickets100,
-        '1000': cost.tickets1000,
-        '5000': cost.tickets5000,
-      };
+    if (!planId) {
+      return NextResponse.json({ error: 'Plan ID required' }, { status: 400 });
+    }
+
+    // Fetch plan with categories, components, and custom fields
+    const plan = await prisma.plan.findUnique({
+      where: { id: parseInt(planId) },
+      include: {
+        categories: {
+          orderBy: { order: 'asc' },
+          include: {
+            components: {
+              orderBy: { order: 'asc' },
+            },
+          },
+        },
+        customFields: {
+          orderBy: { order: 'asc' },
+        },
+      },
     });
 
-    // Component definitions
-    const components = [
-      {
-        component: 'Core Compute',
-        service: 'Azure Container Apps / App Service',
-        specs: '4 vCPU, 16 GB RAM (Medium Workload)',
-        cost: costsData.coreCompute?.[tickets] || 0,
-        scaling: 'Instances: 1 → 1 → 1 → 1 → 3 Fixed (no scaling) with high availability',
-      },
-      {
-        component: 'Relational Database',
-        service: 'Azure Database for PostgreSQL - Flexible Server',
-        specs: '4 vCores, 16 GB RAM, 256 GB Storage',
-        cost: costsData.relationalDb?.[tickets] || 0,
-        scaling: 'Fixed (no scaling) with high availability',
-      },
-      {
-        component: 'NoSQL Database',
-        service: 'Azure Cosmos DB (MongoDB API)',
-        specs: '1,000 RU/s, 25 GB Storage',
-        cost: costsData.nosqlDb?.[tickets] || 0,
-        scaling: 'Fixed (no scaling)',
-      },
-      {
-        component: 'Message Queue',
-        service: 'Azure Event Hubs & CloudAMQP',
-        specs: 'Event Hubs Standard, CloudAMQP Power Panda plan',
-        cost: costsData.messageQueue?.[tickets] || 0,
-        scaling: 'Fixed (no scaling)',
-      },
-      {
-        component: 'Networking',
-        service: 'Azure Data Transfer',
-        specs: '1 TB of monthly egress from core to edge',
-        cost: costsData.networking?.[tickets] || 0,
-        scaling: 'Incremental(KB-level data) Fixed at 2 VMs for 1000 tickets and 3VMs for 5000 tickets',
-      },
-      {
-        component: 'Edge Compute',
-        service: 'Azure Virtual Machines',
-        specs: '2 VMs, D4ds v5 series (4 vCores, 16 GB RAM)',
-        cost: costsData.edgeCompute?.[tickets] || 0,
-        scaling: 'Fixed at 2 VMs for 1000 tickets and 3VMs for 5000 tickets',
-      },
-      {
-        component: 'Monitoring & Security',
-        service: 'Azure Monitor / Log Analytics / Security',
-        specs: 'Variable based on data volume',
-        cost: costsData.monitoring?.[tickets] || 0,
-        scaling: 'Log Volume: 1x → 1.05x → 1.15x → 1.30x → 1.50x',
-      },
-    ];
+    if (!plan) {
+      return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+    }
 
-    // Calculate totals
-    let infrastructureTotal = 0;
-    components.forEach(comp => {
-      infrastructureTotal += parseFloat(comp.cost);
-    });
+    const ticketKey = `tickets${tickets}`;
 
-    const deploymentCost = costsData.deployment?.[tickets] || 0;
-    const grandTotal = infrastructureTotal + parseFloat(deploymentCost);
-
-    // Build CSV content
+    // CSV helper
     const escapeCSV = (value) => {
       if (value === null || value === undefined) return '';
       const stringValue = String(value);
@@ -96,44 +49,90 @@ export async function GET(request) {
       return stringValue;
     };
 
+    const getCustomFieldValue = (component, fieldName) => {
+      try {
+        const data = typeof component.customFieldData === 'string' 
+          ? JSON.parse(component.customFieldData) 
+          : component.customFieldData || {};
+        return data[fieldName] || '';
+      } catch {
+        return '';
+      }
+    };
+
     let csvContent = '';
     
-    // Header
-    csvContent += 'Component,Azure Service,Specifications,Cost (USD) - ' + tickets + ' Tickets,Scaling Rationale\n';
+    // Header with plan info
+    csvContent += `Plan: ${escapeCSV(plan.name)}\n`;
+    csvContent += `Description: ${escapeCSV(plan.description)}\n`;
+    csvContent += `Ticket Count: ${tickets}\n`;
+    csvContent += `\n`;
     
-    // Data rows
-    components.forEach(comp => {
-      csvContent += [
-        escapeCSV(comp.component),
-        escapeCSV(comp.service),
-        escapeCSV(comp.specs),
-        escapeCSV(comp.cost),
-        escapeCSV(comp.scaling),
-      ].join(',') + '\n';
+    // Column headers
+    const headers = ['Component'];
+    plan.customFields.forEach(field => {
+      headers.push(field.name);
+    });
+    headers.push(`Cost (USD) - ${tickets} Tickets`);
+    csvContent += headers.map(h => escapeCSV(h)).join(',') + '\n';
+
+    // Process each category
+    plan.categories.forEach(category => {
+      // Category name row
+      csvContent += `\n${escapeCSV(category.name)}\n`;
+      
+      let categoryTotal = 0;
+
+      // Components in category
+      category.components.forEach(comp => {
+        const cost = parseFloat(comp[ticketKey]) || 0;
+        categoryTotal += cost;
+
+        const row = [escapeCSV(comp.name)];
+        
+        // Add custom field values
+        plan.customFields.forEach(field => {
+          row.push(escapeCSV(getCustomFieldValue(comp, field.name)));
+        });
+        
+        // Add cost
+        row.push(escapeCSV(cost));
+        
+        csvContent += row.join(',') + '\n';
+      });
+
+      // Category total
+      if (category.showTotal) {
+        const totalRow = [escapeCSV(`${category.name} Total`)];
+        for (let i = 0; i < plan.customFields.length; i++) {
+          totalRow.push('');
+        }
+        totalRow.push(escapeCSV(categoryTotal.toFixed(2)));
+        csvContent += totalRow.join(',') + '\n';
+      }
     });
 
-    // Infrastructure Total row
-    csvContent += escapeCSV('Infrastructure Total') + ',,,';
-    csvContent += escapeCSV(infrastructureTotal.toFixed(2)) + ',\n';
+    // Grand total
+    let grandTotal = 0;
+    plan.categories.forEach(category => {
+      category.components.forEach(comp => {
+        grandTotal += parseFloat(comp[ticketKey]) || 0;
+      });
+    });
 
-    // Deployment row
-    csvContent += [
-      escapeCSV('Deployment'),
-      escapeCSV('One-time setup and configuration'),
-      escapeCSV('Initial deployment'),
-      escapeCSV(deploymentCost),
-      escapeCSV('Fixed'),
-    ].join(',') + '\n';
-
-    // Grand Total row
-    csvContent += escapeCSV('TOTAL (Exclusive of LLM)') + ',,,';
-    csvContent += escapeCSV(grandTotal.toFixed(2)) + ',\n';
+    csvContent += '\n';
+    const grandTotalRow = [escapeCSV('TOTAL (Exclusive of LLM)')];
+    for (let i = 0; i < plan.customFields.length; i++) {
+      grandTotalRow.push('');
+    }
+    grandTotalRow.push(escapeCSV(grandTotal.toFixed(2)));
+    csvContent += grandTotalRow.join(',') + '\n';
 
     // Return CSV file
     return new NextResponse(csvContent, {
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': `attachment; filename="Azure_Cost_${tickets}_Tickets.csv"`,
+        'Content-Disposition': `attachment; filename="${plan.name.replace(/[^a-z0-9]/gi, '_')}_${tickets}_Tickets.csv"`,
       },
     });
   } catch (error) {

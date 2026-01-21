@@ -9,8 +9,6 @@ services:
       POSTGRES_DB: genie_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,6 +16,32 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: genie-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres123@postgres:5432/genie_db
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: 8f3d2a9b1c7e4f6d5a8b2c9d7e1f3a6b4c9d2e7f1a5b3c8d6f4e7a9b2c1d3f5
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+        npx prisma db push &&
+        node prisma/seed-user.js &&
+        node prisma/seed-regions.js &&
+        node prisma/seed-products.js &&
+        node prisma/seed-plans-v2.js &&
+        node server.js
+      "
 
 volumes:
   postgres_data:
